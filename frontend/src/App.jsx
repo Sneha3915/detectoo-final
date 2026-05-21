@@ -15,7 +15,13 @@ function useAnalyze() {
       body.append('return_mask', 'true');
       const ctrl = new AbortController();
       const tid  = setTimeout(() => ctrl.abort(), 60000);
-      const res  = await fetch('/v1/analyze', { method: 'POST', body, signal: ctrl.signal });
+      const res = await fetch('https://detectoo-final-production.up.railway.app/v1/analyze',
+  {
+    method: 'POST',
+    body,
+    signal: ctrl.signal
+  }
+);
       clearTimeout(tid);
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || `Error ${res.status}`); }
       setResult(await res.json());
