@@ -21,7 +21,7 @@ export default function Detector() {
       formData.append('file', file);
 
       const res = await fetch(
-        'http://127.0.0.1:8000/v1/analyze',
+        'https://detectoo.onrender.com/',
         {
           method: 'POST',
           body: formData
