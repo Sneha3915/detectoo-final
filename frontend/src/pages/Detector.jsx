@@ -9,33 +9,36 @@ export default function Detector() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("side");
 
-  const handleFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const API_URL = "https://detectoo.onrender.com";
 
-    setPreview(URL.createObjectURL(file));
-    setLoading(true);
+ const handleFile = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+  setPreview(URL.createObjectURL(file));
+  setLoading(true);
 
-      const res = await fetch(
-        'https://detectoo.onrender.com/',
-        {
-          method: 'POST',
-          body: formData
-        }
-      );
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const res = await fetch(
+      `${API_URL}/v1/analyze`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+    setResult(data);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const downloadPDF = () => {
 
