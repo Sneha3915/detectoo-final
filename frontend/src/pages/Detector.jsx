@@ -10,6 +10,7 @@ export default function Detector() {
   const [viewMode, setViewMode] = useState("side");
 
   const API_URL = "https://detectoo.onrender.com";
+  //const API_URL = "http://localhost:8000";
 
  const handleFile = async (e) => {
   const file = e.target.files[0];
@@ -40,205 +41,481 @@ export default function Detector() {
   }
 };
 
-  const downloadPDF = () => {
+const downloadPDF = () => {
 
   const pdf = new jsPDF("p", "mm", "a4");
 
-  // ================= HEADER =================
+  let currentY = 0;
 
-  pdf.setFillColor(5, 7, 20);
-  pdf.rect(0, 0, 210, 28, "F");
+  // =====================================================
+  // HEADER
+  // =====================================================
 
-  pdf.setTextColor(255, 60, 60);
+  pdf.setFillColor(5,7,20);
+  pdf.rect(0,0,210,28,"F");
+
+  pdf.setTextColor(255,60,60);
   pdf.setFontSize(24);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("DETECTOO", 15, 16);
+  pdf.setFont("helvetica","bold");
+  pdf.text("DETECTOO",15,16);
 
   pdf.setTextColor(255,255,255);
   pdf.setFontSize(11);
-  pdf.text("FORENSIC IMAGE ANALYSIS REPORT", 70, 12);
+
   pdf.text(
-    new Date().toLocaleString(),
-    70,
-    18
+      " AI IMAGE FORENSIC REPORT",
+      70,
+      12
   );
 
-  // ================= VERDICT CARD =================
+  pdf.text(
+      new Date().toLocaleString(),
+      70,
+      18
+  );
 
-  pdf.setFillColor(25, 5, 5);
-  pdf.setDrawColor(220, 40, 40);
-  pdf.roundedRect(15, 35, 180, 28, 4, 4, "FD");
+  currentY = 35;
+
+  // =====================================================
+  // VERDICT CARD
+  // =====================================================
+
+  pdf.setFillColor(25,5,5);
+  pdf.setDrawColor(220,40,40);
+
+  pdf.roundedRect(
+      15,
+      currentY,
+      180,
+      28,
+      4,
+      4,
+      "FD"
+  );
 
   pdf.setTextColor(255,255,255);
+
   pdf.setFontSize(20);
 
   pdf.text(
-    result.verdict.toUpperCase(),
-    22,
-    50
+      result.verdict.toUpperCase(),
+      22,
+      currentY+15
   );
 
   pdf.setFontSize(10);
 
   pdf.text(
-    `CONFIDENCE: ${result.confidence}%`,
-    22,
-    58
+      `AI CONFIDENCE : ${result.ai_confidence}%`,
+      22,
+      currentY+23
   );
 
   pdf.text(
-    `TAMPER COVERAGE: ${result.tamper_percentage}%`,
-    90,
-    58
+      `TAMPER COVERAGE : ${result.tamper_percentage}%`,
+      90,
+      currentY+23
   );
 
-  // ================= METRICS =================
+  currentY += 43;
+
+  // =====================================================
+  // METRICS TITLE
+  // =====================================================
 
   pdf.setTextColor(255,60,60);
-  pdf.setFontSize(12);
-  pdf.text("SCAN METRICS",15,78);
 
-  pdf.setDrawColor(255,80,80);
-  pdf.line(45,78,190,78);
+  pdf.setFontSize(12);
+
+  pdf.text(
+      "SCAN METRICS",
+      15,
+      currentY
+  );
+
+  pdf.line(
+      45,
+      currentY,
+      190,
+      currentY
+  );
+
+  currentY += 5;
+
+  // =====================================================
+  // METRICS
+  // =====================================================
 
   const metrics = [
-  ["FILE","Uploaded Image"],
-  ["PROC TIME",`${result.processing_time}s`],
-  ["REGIONS","4"],
-  ["MODEL","DEMO"],
-  ["ELA",result.metrics.ela_score],
-  ["EDGE",result.metrics.edge_score],
-  ["NOISE",result.metrics.noise_score],
-  ["CONF",`${result.confidence}%`]
-];
-  let y = 82;
+
+      ["FILE","Uploaded Image"],
+
+      ["PROCESS TIME",`${result.processing_time}s`],
+
+      ["REGIONS",String(result.region_count)],
+
+      ["MODEL","EfficientNet-B0"],
+
+      ["AI PREDICTION",result.ai_prediction],
+
+      ["AI CONFIDENCE",`${result.ai_confidence}%`],
+
+      ["ELA SCORE",String(result.metrics.ela_score)],
+
+      ["EDGE SCORE",String(result.metrics.edge_score)],
+
+      ["NOISE SCORE",String(result.metrics.noise_score)],
+
+      ["RECOMMENDATION",
+
+      result.verdict==="Suspicious"
+
+      ? "Manual Review"
+
+      : "Verified"]
+
+  ];
 
   metrics.forEach((m,index)=>{
 
-    const col = index % 2;
-    const row = Math.floor(index/2);
+      const column = index % 2;
 
-    const x = col === 0 ? 15 : 105;
-    const yy = y + row*14;
+      const row = Math.floor(index/2);
 
-    pdf.setFillColor(10,10,25);
-    pdf.rect(x,yy,85,12,"F");
+      const x = column===0 ? 15 : 105;
 
-    pdf.setTextColor(255,255,255);
-    pdf.setFontSize(8);
-    pdf.text(m[0],x+3,yy+4);
+      const y = currentY + row*14;
 
-    pdf.setFontSize(9);
-    pdf.text(String(m[1]),x+3,yy+9);
+      pdf.setFillColor(10,10,25);
+
+      pdf.rect(
+          x,
+          y,
+          85,
+          12,
+          "F"
+      );
+
+      pdf.setTextColor(255,255,255);
+
+      pdf.setFontSize(8);
+
+      pdf.text(
+          m[0],
+          x+3,
+          y+4
+      );
+
+      pdf.setFontSize(9);
+
+      pdf.text(
+          String(m[1]),
+          x+3,
+          y+9
+      );
 
   });
 
-  // ================= IMAGE SECTION =================
+  currentY += Math.ceil(metrics.length/2)*14 + 10;
+
+  // =====================================================
+  // IMAGE COMPARISON
+  // =====================================================
+
+  pdf.setTextColor(255,60,60);
+
+  pdf.setFontSize(12);
+
+  pdf.text(
+      "IMAGE COMPARISON",
+      15,
+      currentY
+  );
+
+  pdf.line(
+      60,
+      currentY,
+      190,
+      currentY
+  );
+
+  currentY += 5;
+
+  try{
+
+      pdf.addImage(
+          preview,
+          "JPEG",
+          15,
+          currentY,
+          80,
+          60
+      );
+
+      pdf.addImage(
+          `data:image/png;base64,${result.overlay_image}`,
+          "PNG",
+          110,
+          currentY,
+          80,
+          60
+      );
+
+      pdf.setFontSize(9);
+
+      pdf.setTextColor(0,180,120);
+
+      pdf.text(
+          "ORIGINAL IMAGE",
+          15,
+          currentY+65
+      );
+
+      pdf.setTextColor(255,60,60);
+
+      pdf.text(
+          "DETECTED REGIONS",
+          110,
+          currentY+65
+      );
+
+  }catch(err){
+
+      console.log(err);
+
+  }
+
+  currentY += 80;
+
+    // =====================================================
+  // DETECTED REGIONS TABLE
+  // =====================================================
 
   pdf.setTextColor(255,60,60);
   pdf.setFontSize(12);
 
-  pdf.text("IMAGE COMPARISON",15,140);
-  pdf.line(60,140,190,140);
-
-  try{
-
-    pdf.addImage(
-      preview,
-      "JPEG",
+  pdf.text(
+      "DETECTED REGIONS",
       15,
-      145,
-      80,
-      60
-    );
-
-    pdf.addImage(
-      `data:image/png;base64,${result.overlay_image}`,
-      "PNG",
-      110,
-      145,
-      80,
-      60
-    );
-    // Labels below images
-
-  pdf.setFontSize(9);
-
-  pdf.setTextColor(0,180,120);
-  pdf.text(
-    "ORIGINAL IMAGE",
-    15,
-    210
+      currentY
   );
 
-  pdf.setTextColor(255,60,60);
-  pdf.text(
-    "TAMPERED REGIONS",
-    110,
-    210
+  pdf.line(
+      60,
+      currentY,
+      190,
+      currentY
   );
 
-  }catch(err){
-    console.log(err);
-  }
-
-  // ================= REGION TABLE =================
-
-  pdf.setTextColor(255,60,60);
-  pdf.text("TAMPERED REGIONS",15,220);
-
-  pdf.line(65,220,190,220);
+  currentY += 5;
 
   pdf.setFillColor(10,10,25);
-  pdf.rect(15,225,175,10,"F");
+
+  pdf.rect(
+      15,
+      currentY,
+      175,
+      10,
+      "F"
+  );
 
   pdf.setTextColor(255,255,255);
 
-  pdf.text("ID",18,232);
-  pdf.text("AREA",50,232);
-  pdf.text("CONF",95,232);
-  pdf.text("STATUS",140,232);
+  pdf.setFontSize(9);
 
-  const regions = [
-    ["#01","4945","36%","TAMPERED"],
-    ["#02","3918","61%","TAMPERED"],
-    ["#03","1754","51%","TAMPERED"],
-    ["#04","339","65%","TAMPERED"]
-  ];
+  pdf.text("ID",18,currentY+7);
+  pdf.text("AREA(px)",45,currentY+7);
+  pdf.text("CONF",90,currentY+7);
+  pdf.text("STATUS",135,currentY+7);
 
-  let rowY = 242;
+  currentY += 15;
 
-  regions.forEach(r=>{
+  const regions = result.regions || [];
 
-    pdf.setTextColor(0,0,0);
+  if(regions.length===0){
 
-    pdf.text(r[0],18,rowY);
-    pdf.text(r[1],50,rowY);
-    pdf.text(r[2],95,rowY);
+      pdf.setTextColor(120,120,120);
 
-    pdf.setTextColor(255,0,0);
-    pdf.text(r[3],140,rowY);
+      pdf.text(
+          "No suspicious regions detected.",
+          18,
+          currentY
+      );
 
-    rowY += 8;
+      currentY += 10;
 
-  });
+  }else{
 
-  // ================= FOOTER =================
+      regions.forEach(region=>{
+
+          pdf.setTextColor(0,0,0);
+
+          pdf.text(
+              `#${region.id}`,
+              18,
+              currentY
+          );
+
+          pdf.text(
+              String(region.area_px),
+              45,
+              currentY
+          );
+
+          pdf.text(
+              `${region.confidence}%`,
+              90,
+              currentY
+          );
+
+          pdf.setTextColor(255,0,0);
+
+          pdf.text(
+              "DETECTED",
+              135,
+              currentY
+          );
+
+          currentY += 8;
+
+      });
+
+  }
+
+  currentY += 8;
+
+  // =====================================================
+  // RECOMMENDATION
+  // =====================================================
+
+  pdf.setTextColor(255,60,60);
+
+  pdf.setFontSize(12);
+
+  pdf.text(
+      "FINAL RECOMMENDATION",
+      15,
+      currentY
+  );
+
+  pdf.line(
+      70,
+      currentY,
+      190,
+      currentY
+  );
+
+  currentY += 8;
+
+  pdf.setFillColor(245,245,245);
+
+  pdf.roundedRect(
+      15,
+      currentY,
+      175,
+      18,
+      2,
+      2,
+      "F"
+  );
+
+  pdf.setTextColor(40,40,40);
+
+  pdf.setFontSize(10);
+
+  pdf.text(
+      result.recommendation,
+      18,
+      currentY+10
+  );
+
+  currentY += 28;
+
+  // =====================================================
+  // SUMMARY
+  // =====================================================
+
+  pdf.setTextColor(255,60,60);
+
+  pdf.setFontSize(12);
+
+  pdf.text(
+      "ANALYSIS SUMMARY",
+      15,
+      currentY
+  );
+
+  pdf.line(
+      55,
+      currentY,
+      190,
+      currentY
+  );
+
+  currentY += 8;
+
+  pdf.setTextColor(0,0,0);
+
+  pdf.setFontSize(10);
+
+  pdf.text(
+      `Final Verdict : ${result.verdict}`,
+      18,
+      currentY
+  );
+
+  currentY += 6;
+
+  pdf.text(
+      `AI Prediction : ${result.ai_prediction}`,
+      18,
+      currentY
+  );
+
+  currentY += 6;
+
+  pdf.text(
+      `AI Confidence : ${result.ai_confidence}%`,
+      18,
+      currentY
+  );
+
+  currentY += 6;
+
+  pdf.text(
+      `Tamper Coverage : ${result.tamper_percentage}%`,
+      18,
+      currentY
+  );
+
+  currentY += 12;
+
+  // =====================================================
+  // FOOTER
+  // =====================================================
 
   pdf.setFillColor(5,7,20);
-  pdf.rect(0,285,210,12,"F");
+
+  pdf.rect(
+      0,
+      285,
+      210,
+      12,
+      "F"
+  );
 
   pdf.setTextColor(180,180,180);
 
   pdf.setFontSize(8);
 
   pdf.text(
-    "DETECTOO  • College of Engineering Pune",
-    15,
-    292
+      "DETECTOO  •  AI Image Forgery Detection System • Final Year Project",
+      15,
+      292
   );
 
-  pdf.save("detectoo-report.pdf");
+  pdf.save("Detectoo_Report.pdf");
+
 };
 
   return (
@@ -413,14 +690,14 @@ export default function Detector() {
           <h1>
             {result.verdict === "Tampered"
               ? "EVIDENCE TAMPERED"
-              : "IMAGE AUTHENTIC"}
+              : result.verdict === "Authentic"
+              ? "IMAGE AUTHENTIC"
+              : "SUSPICIOUS IMAGE"}
           </h1>
 
           <p className="verdict-sub">
 
-            CONFIDENCE
-            {' '}
-            {result.confidence}%
+            AI CONFIDENCE {result.ai_confidence}%
 
           </p>
 
@@ -433,7 +710,7 @@ export default function Detector() {
               </span>
 
               <span>
-                {result.confidence}%
+                {result.ai_confidence}%
               </span>
 
             </div>
@@ -443,8 +720,7 @@ export default function Detector() {
               <div
                 className="progress-fill"
                 style={{
-                  width:
-                  `${result.confidence}%`
+                  width: `${result.ai_confidence}%`
                 }}
               />
 
@@ -466,15 +742,18 @@ export default function Detector() {
             </div>
 
             <div className="metric-card">
-              <p>CONFIDENCE</p>
-              <h2>
-                {result.confidence}%
-              </h2>
+              <p>AI CONFIDENCE</p>
+              <h2>{result.ai_confidence}%</h2>
+            </div>
+
+            <div className="metric-card">
+              <p>AI PREDICTION</p>
+              <h2>{result.ai_prediction}</h2>
             </div>
 
             <div className="metric-card">
               <p>REGIONS</p>
-              <h2>4</h2>
+              <h2>{result.region_count}</h2>
             </div>
 
             <div className="metric-card">
@@ -505,9 +784,11 @@ export default function Detector() {
 
           <div className="log-box">
 
-            <p>&gt; VERDICT: {result.verdict}</p>
+            <p>&gt; FINAL VERDICT: {result.verdict}</p>
 
-            <p>&gt; CONFIDENCE: {result.confidence}%</p>
+            <p>&gt; AI PREDICTION: {result.ai_prediction}</p>
+
+            <p>&gt; AI CONFIDENCE: {result.ai_confidence}%</p>
 
             <p>&gt; TAMPER COVERAGE: {result.tamper_percentage}%</p>
 
@@ -528,7 +809,15 @@ export default function Detector() {
       </section>
       <div className="regions-section">
 
-  <h3>TAMPERED REGIONS (4)</h3>
+  <div className="regions-grid">
+  {result.regions.map((region) => (
+    <div key={region.id} className="region-card">
+      <h4>REGION #{region.id}</h4>
+      <p>AREA: {region.area_px} px</p>
+      <p>CONF: {region.confidence}%</p>
+    </div>
+  ))}
+</div>
 
   <div className="regions-grid">
 

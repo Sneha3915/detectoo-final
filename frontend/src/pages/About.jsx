@@ -18,6 +18,7 @@ export default function About() {
     <h2>Algorithms Used</h2>
 
     <ul>
+      <li>EfficientNet-B0 Deep Learning Model</li>
 
       <li>Error Level Analysis (ELA)</li>
 
@@ -29,6 +30,14 @@ export default function About() {
 
       <li>Overlay Visualization</li>
 
+    </ul>
+
+    <h2>Dataset Used</h2>
+    <ul>
+      <li>CASIA 2.0 Image Tampering Dataset</li>
+       <li>7,492 Authentic Images</li> 
+       <li>5,123 Tampered Images</li> 
+       <li>Total Images: 12,615</li> 
     </ul>
 
     <h2>Technologies Used</h2>
@@ -43,7 +52,7 @@ export default function About() {
 
       <li>Python</li>
 
-      <li>Railway</li>
+      <li>Render</li>
 
       <li>Netlify</li>
 

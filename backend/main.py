@@ -2,13 +2,14 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, ImageChops, ImageEnhance
-
 import cv2
 import numpy as np
 from PIL import Image, ImageChops, ImageEnhance
 import io
 import base64
 import time
+from model.predict import predict_image
+
 
 
 # CREATE APP FIRST
@@ -103,6 +104,11 @@ async def analyze_image(
     pil_image = Image.open(
         io.BytesIO(contents)
     ).convert("RGB")
+
+    ai_result = predict_image(pil_image)
+
+    ai_prediction = ai_result["prediction"]
+    ai_confidence = ai_result["confidence"]
 
     # -----------------------------
     # ELA
@@ -232,11 +238,22 @@ async def analyze_image(
         )
     )
 
-    verdict = (
-        "Tampered"
-        if tamper_percentage > 5
-        else "Authentic"
-    )
+    # -----------------------------
+# Final Hybrid Verdict
+# -----------------------------
+    if ai_prediction == "tampered" and tamper_percentage > 5:
+        verdict = "Tampered"
+
+    elif ai_prediction == "authentic" and tamper_percentage <= 5:
+        verdict = "Authentic"
+
+    else:
+        verdict = "Suspicious"
+
+    if verdict == "Suspicious":
+        recommendation = "AI and forensic analysis disagree. Manual verification is recommended."
+    else:
+        recommendation = "AI and forensic analysis are consistent."
 
     processing_time = round(
         time.time() - start_time,
@@ -245,9 +262,12 @@ async def analyze_image(
 
     result = {
         "verdict": verdict,
-        "confidence": confidence_score,
+        # AI Prediction
+        "ai_prediction": ai_prediction,
+        "ai_confidence": ai_confidence,
         "tamper_percentage": tamper_percentage,
         "processing_time": processing_time,
+        "recommendation": recommendation,
 
         "metrics": {
             "ela_score": round(ela_score, 2),
