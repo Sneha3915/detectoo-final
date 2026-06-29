@@ -9,8 +9,8 @@ export default function Detector() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("side");
 
-  //const API_URL = "https://detectoo.onrender.com";
-  const API_URL = "http://localhost:8000";
+  const API_URL = "https://detectoo.onrender.com";
+  //const API_URL = "http://localhost:8000";
 const handleFile = async (e) => {
 
   const file = e.target.files[0];
