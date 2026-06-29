@@ -99,30 +99,22 @@ async def analyze_image(
     image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
     # Resize large images for faster processing
-    MAX_SIZE = 512
-
     h, w = image.shape[:2]
+
+    MAX_SIZE = 512
 
     if max(h, w) > MAX_SIZE:
 
         scale = MAX_SIZE / max(h, w)
 
-        new_w = int(w * scale)
-        new_h = int(h * scale)
-
-        image = cv2.resize(image, (new_w, new_h))
-
-    if image is None:
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Invalid image"}
+        image = cv2.resize(
+            image,
+            (int(w * scale), int(h * scale))
         )
 
-    pil_image = Image.open(
-        io.BytesIO(contents)
-    ).convert("RGB")
-
-    pil_image = pil_image.resize((new_w, new_h))
+    pil_image = Image.fromarray(
+        cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    )
 
     ai_result = predict_image(pil_image)
 
