@@ -9,39 +9,83 @@ export default function Detector() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("side");
 
-  const API_URL = "https://detectoo.onrender.com";
-  //const API_URL = "http://localhost:8000";
+  //const API_URL = "https://detectoo.onrender.com";
+  const API_URL = "http://localhost:8000";
+const handleFile = async (e) => {
 
- const handleFile = async (e) => {
   const file = e.target.files[0];
+
   if (!file) return;
 
-  setPreview(URL.createObjectURL(file));
-  setLoading(true);
+  // Allow only supported image types
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch(
-      `${API_URL}/v1/analyze`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    const data = await res.json();
-    setResult(data);
-
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
+  if (!allowedTypes.includes(file.type)) {
+    alert("Please upload a JPG, PNG or WEBP image.");
+    return;
   }
+
+  // Read image as Base64
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+
+    setPreview(reader.result);
+
+    setLoading(true);
+
+    try {
+
+      const formData = new FormData();
+
+      formData.append("file", file);
+
+      const res = await fetch(
+        `${API_URL}/v1/analyze`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await res.json();
+
+      setResult(data);
+
+    } catch (err) {
+
+      console.error(err);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  reader.readAsDataURL(file);
+
+};
+const loadImage = (src) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.crossOrigin = "Anonymous";
+
+    img.onload = () => resolve(img);
+
+    img.onerror = reject;
+
+    img.src = src;
+  });
 };
 
-const downloadPDF = () => {
+const downloadPDF = async () => {
 
   const pdf = new jsPDF("p", "mm", "a4");
 
@@ -243,49 +287,52 @@ const downloadPDF = () => {
 
   currentY += 5;
 
-  try{
+  try {
 
-      pdf.addImage(
-          preview,
-          "JPEG",
-          15,
-          currentY,
-          80,
-          60
-      );
+    // Original Image
+    if (preview) {
 
-      pdf.addImage(
-          `data:image/png;base64,${result.overlay_image}`,
-          "PNG",
-          110,
-          currentY,
-          80,
-          60
-      );
+        const originalFormat = preview.includes("image/jpeg")
+            ? "JPEG"
+            : "PNG";
 
-      pdf.setFontSize(9);
+        pdf.addImage(
+            preview,
+            originalFormat,
+            15,
+            currentY,
+            80,
+            60
+        );
+    }
 
-      pdf.setTextColor(0,180,120);
+    // Overlay Image
+    if (result.overlay_image) {
 
-      pdf.text(
-          "ORIGINAL IMAGE",
-          15,
-          currentY+65
-      );
+        pdf.addImage(
+            `data:image/png;base64,${result.overlay_image}`,
+            "PNG",
+            110,
+            currentY,
+            80,
+            60
+        );
+    }
 
-      pdf.setTextColor(255,60,60);
+    pdf.setFontSize(9);
 
-      pdf.text(
-          "DETECTED REGIONS",
-          110,
-          currentY+65
-      );
+    pdf.setTextColor(0,180,120);
+    pdf.text("ORIGINAL IMAGE",15,currentY+65);
 
-  }catch(err){
+    pdf.setTextColor(255,60,60);
+    pdf.text("DETECTED REGIONS",110,currentY+65);
 
-      console.log(err);
+}
+catch(err){
 
-  }
+    console.error("PDF Image Error:",err);
+
+}
 
   currentY += 80;
 
@@ -404,25 +451,7 @@ const downloadPDF = () => {
 
   currentY += 8;
 
-  <div
-  style={{
-    marginTop: "20px",
-    padding: "15px",
-    borderRadius: "10px",
-    background: "#1e1e2f",
-    color: "white"
-  }}
->
-  <h4>Risk Level Legend</h4>
-
-  <p>🟢 <strong>Low Risk</strong> (Confidence &lt; 40%)</p>
-
-  <p>🟡 <strong>Medium Risk</strong> (Confidence 40% - 69%)</p>
-
-  <p>🔴 <strong>High Risk</strong> (Confidence ≥ 70%)</p>
-
-</div>
-
+  
   // =====================================================
   // RECOMMENDATION
   // =====================================================
@@ -557,6 +586,8 @@ const downloadPDF = () => {
 
 };
 
+console.log("Preview =", preview);
+
   return (
 <div className="detector-page">
 
@@ -569,6 +600,7 @@ const downloadPDF = () => {
     <label className="upload-box">
       <input
         type="file"
+        accept='.jpg, .jpeg, .png, .webp'
         hidden
         onChange={handleFile}
       />
@@ -642,7 +674,12 @@ const downloadPDF = () => {
 
               <img
                 src={preview}
-                alt=""
+                alt="Original"
+                onLoad={() => console.log("Image Loaded")}
+                onError={(e) => {
+                  console.log("Image Error");
+                  console.log(preview);
+                }}
               />
 
             </div>
@@ -849,42 +886,17 @@ const downloadPDF = () => {
       <div className="regions-section">
 
   <div className="regions-grid">
-  {result.regions.map((region) => (
-    <div key={region.id} className="region-card">
-      <h4>REGION #{region.id}</h4>
+  {result.regions.map((region, index) => (
+    <div
+    key={region.id}
+    className={`region-card ${region.status.replace(/\s+/g,"-").toLowerCase()}`}>
+      <h4>REGION #{index + 1}</h4>
       <p>AREA: {region.area_px} px</p>
       <p>CONF: {region.confidence}%</p>
+      <p>STATUS: {region.status}</p>
     </div>
   ))}
 </div>
-
-  <div className="regions-grid">
-
-    <div className="region-card">
-      <h4>REGION #01</h4>
-      <p>AREA: 4945 px</p>
-      <p>CONF: 36%</p>
-    </div>
-
-    <div className="region-card">
-      <h4>REGION #02</h4>
-      <p>AREA: 3918 px</p>
-      <p>CONF: 61%</p>
-    </div>
-
-    <div className="region-card">
-      <h4>REGION #03</h4>
-      <p>AREA: 1754 px</p>
-      <p>CONF: 51%</p>
-    </div>
-
-    <div className="region-card">
-      <h4>REGION #04</h4>
-      <p>AREA: 339 px</p>
-      <p>CONF: 65%</p>
-    </div>
-
-  </div>
 
 </div>
 

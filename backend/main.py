@@ -178,7 +178,8 @@ async def analyze_image(
 
         area = cv2.contourArea(cnt)
 
-        if area < 200:
+        # Ignore very small regions
+        if area < 800:
             continue
 
         x, y, w, h = cv2.boundingRect(cnt)
@@ -190,6 +191,21 @@ async def analyze_image(
             round((area / (w * h)) * 100, 2)
         )
 
+        # -----------------------------
+        # Risk Level
+        # -----------------------------
+        if confidence >= 40:
+            color = (0, 0, 255)
+            status = "High Risk"
+
+        elif confidence >= 25:
+            color = (0, 255, 255)
+            status = "Medium Risk"
+
+        else:
+            color = (0, 255, 0)
+            status = "Low Risk"
+        # Save region
         regions.append({
             "id": idx + 1,
             "bbox": [
@@ -203,21 +219,7 @@ async def analyze_image(
             "status": status
         })
 
-        # Region Color Based on Confidence
-
-        if confidence >= 70:
-            color = (0, 0, 255)      # Red (high risk)
-            status = "High Risk"
-
-        elif confidence >= 40:
-            color = (0, 255, 255)    # Yellow (mediun risk)
-            status = "Medium Risk"
-
-        else:
-            color = (0, 255, 0)      # Green (Low risk)
-            status = "Low risk"
-
-
+        # Draw rectangle
         cv2.rectangle(
             overlay,
             (x, y),
@@ -226,18 +228,25 @@ async def analyze_image(
             2
         )
 
-        label = f"{confidence:.1f}%"
-
+        # Draw confidence label
         cv2.putText(
             overlay,
-            label,
-            (x, max(y - 8, 15)),
+            f"{confidence:.1f}%",
+            (x, max(20, y - 5)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             color,
             2
         )
 
+        # Keep only top 5 most suspicious regions
+        regions = sorted(
+            regions,
+            key=lambda r: r["confidence"],
+            reverse=True
+        )[:3]
+
+  
     # -----------------------------
     # Heatmap
     # -----------------------------
