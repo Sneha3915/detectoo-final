@@ -11,7 +11,6 @@ import time
 from model.predict import predict_image
 
 
-
 # CREATE APP FIRST
 app = FastAPI()
 
@@ -28,7 +27,7 @@ app.add_middleware(
 # -----------------------------
 # Error Level Analysis (ELA)
 # -----------------------------
-def perform_ela(pil_image, quality=90):
+def perform_ela(pil_image, quality=85):
 
     temp_io = io.BytesIO()
 
@@ -78,7 +77,11 @@ def analyze_noise(image):
 # -----------------------------
 def image_to_base64(img):
 
-    _, buffer = cv2.imencode('.png', img)
+    _, buffer = cv2.imencode(
+    ".jpg",
+    img,
+    [int(cv2.IMWRITE_JPEG_QUALITY),80]
+)
 
     return base64.b64encode(buffer).decode('utf-8')
 
@@ -95,6 +98,20 @@ async def analyze_image(
     np_arr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
+    # Resize large images for faster processing
+    MAX_SIZE = 512
+
+    h, w = image.shape[:2]
+
+    if max(h, w) > MAX_SIZE:
+
+        scale = MAX_SIZE / max(h, w)
+
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+
+        image = cv2.resize(image, (new_w, new_h))
+
     if image is None:
         return JSONResponse(
             status_code=400,
@@ -104,6 +121,8 @@ async def analyze_image(
     pil_image = Image.open(
         io.BytesIO(contents)
     ).convert("RGB")
+
+    pil_image = pil_image.resize((new_w, new_h))
 
     ai_result = predict_image(pil_image)
 
@@ -167,7 +186,7 @@ async def analyze_image(
 
         area = cv2.contourArea(cnt)
 
-        if area < 100:
+        if area < 200:
             continue
 
         x, y, w, h = cv2.boundingRect(cnt)
@@ -188,14 +207,42 @@ async def analyze_image(
                 int(y + h)
             ],
             "area_px": int(area),
-            "confidence": confidence
+            "confidence": confidence,
+            "status": status
         })
+
+        # Region Color Based on Confidence
+
+        if confidence >= 70:
+            color = (0, 0, 255)      # Red (high risk)
+            status = "High Risk"
+
+        elif confidence >= 40:
+            color = (0, 255, 255)    # Yellow (mediun risk)
+            status = "Medium Risk"
+
+        else:
+            color = (0, 255, 0)      # Green (Low risk)
+            status = "Low risk"
+
 
         cv2.rectangle(
             overlay,
             (x, y),
             (x + w, y + h),
-            (0, 0, 255),
+            color,
+            2
+        )
+
+        label = f"{confidence:.1f}%"
+
+        cv2.putText(
+            overlay,
+            label,
+            (x, max(y - 8, 15)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
             2
         )
 
@@ -207,7 +254,8 @@ async def analyze_image(
         cv2.COLORMAP_JET
     )
 
-    overlay = cv2.addWeighted(
+    if return_mask:
+      overlay = cv2.addWeighted(
         overlay,
         0.7,
         heatmap,
@@ -255,10 +303,7 @@ async def analyze_image(
     else:
         recommendation = "AI and forensic analysis are consistent."
 
-    processing_time = round(
-        time.time() - start_time,
-        2
-    )
+    processing_time = f"{time.time()-start_time:.2f} sec"
 
     result = {
         "verdict": verdict,

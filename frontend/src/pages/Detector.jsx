@@ -156,9 +156,11 @@ const downloadPDF = () => {
 
       ["MODEL","EfficientNet-B0"],
 
-      ["AI PREDICTION",result.ai_prediction],
+      ["AI PREDICTION",
+      result.ai_prediction ?? "N/A"]  ,
 
-      ["AI CONFIDENCE",`${result.ai_confidence}%`],
+      ["AI CONFIDENCE",
+      `${result.ai_confidence ?? 0}%`],
 
       ["ELA SCORE",String(result.metrics.ela_score)],
 
@@ -368,10 +370,28 @@ const downloadPDF = () => {
               currentY
           );
 
-          pdf.setTextColor(255,0,0);
+          // Set color based on region status
+
+          if(region.status === "High Risk"){
+
+              pdf.setTextColor(255,0,0);      // Red
+
+          }
+          else if(region.status === "Medium Risk"){
+
+              pdf.setTextColor(255,165,0);    // Orange
+
+          }
+          else{
+
+              pdf.setTextColor(0,180,0);      // Green
+
+          }
+
+          // Print the status
 
           pdf.text(
-              "DETECTED",
+              region.status,
               135,
               currentY
           );
@@ -383,6 +403,25 @@ const downloadPDF = () => {
   }
 
   currentY += 8;
+
+  <div
+  style={{
+    marginTop: "20px",
+    padding: "15px",
+    borderRadius: "10px",
+    background: "#1e1e2f",
+    color: "white"
+  }}
+>
+  <h4>Risk Level Legend</h4>
+
+  <p>🟢 <strong>Low Risk</strong> (Confidence &lt; 40%)</p>
+
+  <p>🟡 <strong>Medium Risk</strong> (Confidence 40% - 69%)</p>
+
+  <p>🔴 <strong>High Risk</strong> (Confidence ≥ 70%)</p>
+
+</div>
 
   // =====================================================
   // RECOMMENDATION

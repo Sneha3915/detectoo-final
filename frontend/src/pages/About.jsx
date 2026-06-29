@@ -28,7 +28,6 @@ export default function About() {
 
       <li>Heatmap Generation</li>
 
-      <li>Overlay Visualization</li>
 
     </ul>
 
